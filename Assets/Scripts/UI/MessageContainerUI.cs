@@ -13,7 +13,7 @@ namespace LocalChat.UI
     {
         private const int InitialVisibleComments = 2;
         private const int CommentsToShowPerClick = 3;
-        private const int MaxMessageDepth = 2;
+        private const int MaxMessageDepth = 4;
 
         public event Action MoreDepthRequested;
         public event Action HeightUpdated;
