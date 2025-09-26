@@ -13,7 +13,7 @@ namespace LocalChat.UI
     {
         private const int InitialVisibleComments = 2;
         private const int CommentsToShowPerClick = 3;
-        private const int MaxMessageDepth = 4;
+        private const int MaxMessageDepth = 2;
 
         public event Action MoreDepthRequested;
         public event Action HeightUpdated;
@@ -60,25 +60,21 @@ namespace LocalChat.UI
                     break;
                 default: return;
             }
-            createdMessageUI.HeightUpdated += OnMessageHeightUpdated;
             _messages.Insert(0, createdMessageUI);
-            if (IsMaxDepthReached)
-            {
-
-            }
-            else
+            if (!IsMaxDepthReached)
             {
                 if (_isInitContainer || message.Sender == _messageManager.LocalUser || _shownComments < InitialVisibleComments)
                 {
                     _shownComments++;
                 }
             }
-            UpdateCommentsCountTextAsync().Forget();
             createdMessageUI.CommentContainer.SetDepth(_messageDepth + 1);
             foreach (Message mes in messages)
             {
                 createdMessageUI.CommentContainer.AddMessage(mes);
             }
+            createdMessageUI.HeightUpdated += UpdateCommentsCountText;
+            UpdateCommentsCountText();
         }
 
         public void ShowMoreComments()
@@ -91,11 +87,12 @@ namespace LocalChat.UI
             {
                 _shownComments = Mathf.Min(_shownComments + CommentsToShowPerClick, _messages.Count);
             }
-            UpdateCommentsCountTextAsync().Forget(); 
+            UpdateCommentsCountText();
         }
 
-        private async UniTask UpdateCommentsCountTextAsync()
+        private void UpdateCommentsCountText()
         {
+            float messagesSize = 0;
             for (int i = 0; i < _messages.Count; i++)
             {
                 _messages[i].gameObject.SetActive(false);
@@ -104,31 +101,22 @@ namespace LocalChat.UI
             {
                 _messages[i].gameObject.SetActive(true);
                 _messages[i].transform.SetAsLastSibling();
+                messagesSize += ((RectTransform)_messages[i].transform).sizeDelta.y;
             }
             if (!_isInitContainer)
             {
-                _showCommentsPanel.transform.SetAsLastSibling();
                 int messageCount = _messages.Count;
                 _commentsCountText.text = $"More comments ({messageCount - _shownComments})";
                 _showCommentsPanel.SetActive(messageCount - _shownComments > 0);
+                _showCommentsPanel.transform.SetAsLastSibling();
             }
+            _rectTransform.sizeDelta = new Vector2(_rectTransform.sizeDelta.x, _startHeight + (_showCommentsPanel != null && _showCommentsPanel.activeSelf ? ((RectTransform)_showCommentsPanel.transform).sizeDelta.y : 0) + messagesSize);
+            HeightUpdated?.Invoke();
+        }
+
+        private async void Awake()
+        {
             await UniTask.Yield();
-            HeightUpdated?.Invoke();
-        }
-
-        private void OnMessageHeightUpdated()
-        {
-            float messagesSize = 0;
-            foreach (var message in _messages)
-            {
-                messagesSize += ((RectTransform)message.transform).sizeDelta.y;
-            }
-            _rectTransform.sizeDelta = new Vector2(_rectTransform.sizeDelta.x, _startHeight + messagesSize);
-            HeightUpdated?.Invoke();
-        }
-
-        private void Awake()
-        {
             _startHeight = _rectTransform.sizeDelta.y;
         }
     }
